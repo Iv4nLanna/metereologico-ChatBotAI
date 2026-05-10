@@ -23,6 +23,5 @@ export async function normalizeChatMessages(
   messages: UIMessage[]
 ): Promise<ModelMessage[]> {
   const modelMessages = await convertToModelMessages(messages)
-
   return modelMessages.map(flattenTextOnlyContent)
 }
