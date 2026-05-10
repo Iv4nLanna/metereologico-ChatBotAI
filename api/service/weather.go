@@ -105,6 +105,10 @@ func GetCurrentWeather(geo *GeoResult) (*CurrentWeather, error) {
 }
 
 func GetForecast(geo *GeoResult, days int) (*Forecast, error) {
+	if days < 1 || days > 16 {
+		return nil, fmt.Errorf("days must be between 1 and 16")
+	}
+
 	u := fmt.Sprintf(
 		"%s/v1/forecast?latitude=%.4f&longitude=%.4f&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&forecast_days=%d&timezone=auto",
 		OpenMeteoWeatherURL, geo.Latitude, geo.Longitude, days,
@@ -134,6 +138,23 @@ func GetForecast(geo *GeoResult, days int) (*Forecast, error) {
 	}
 
 	forecast := &Forecast{City: geo.Name}
+
+	n := len(raw.Daily.Time)
+	if n == 0 {
+		return forecast, nil
+	}
+	for _, s := range []int{
+		len(raw.Daily.WeatherCode),
+		len(raw.Daily.Temperature2mMax),
+		len(raw.Daily.Temperature2mMin),
+		len(raw.Daily.PrecipitationSum),
+		len(raw.Daily.PrecipitationProbabilityMax),
+	} {
+		if s < n {
+			return nil, fmt.Errorf("forecast API returned inconsistent array lengths")
+		}
+	}
+
 	for i := range raw.Daily.Time {
 		forecast.Days = append(forecast.Days, ForecastDay{
 			Date:               raw.Daily.Time[i],
