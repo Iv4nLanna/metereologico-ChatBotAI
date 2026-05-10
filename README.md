@@ -1,87 +1,198 @@
 # Weather Platform ⛅
 
-Plataforma de previsão do tempo com **API Go** + **AI Agent Next.js** que responde perguntas em linguagem natural.
+Plataforma de previsão do tempo com **API Go** e **AI Agent em Next.js** que responde perguntas em linguagem natural sobre o clima.
 
-## Requisitos
+---
 
-- Docker e Docker Compose
-- Chave de API do [Groq](https://console.groq.com) (gratuita)
+## Início rápido
 
-## Quickstart
+**Pré-requisitos:** Docker Desktop + chave gratuita do [Groq](https://console.groq.com)
 
 ```bash
-# 1. Clone e configure
-git clone <repo-url>
-cd weather-platform
-cp .env.example .env
-# Edite .env e adicione: GROQ_API_KEY=sua_chave_aqui
-
-# 2. Suba tudo
+git clone https://github.com/Iv4nLanna/medereologico-ChatBotAI.git
+cd medereologico-ChatBotAI
+cp .env.example .env          # edite .env e insira sua GROQ_API_KEY
 docker compose up --build
-
-# 3. Acesse
-# Frontend: http://localhost:3000
-# API:      http://localhost:8080
 ```
 
-## Endpoints da API
-
-| Método | Rota | Exemplo |
-|--------|------|---------|
-| GET | `/health` | `curl localhost:8080/health` |
-| GET | `/weather?city={city}` | `curl "localhost:8080/weather?city=Curitiba"` |
-| GET | `/forecast?city={city}&days={n}` | `curl "localhost:8080/forecast?city=SP&days=3"` |
-
-## Observability
-
-The API exposes two built-in observability endpoints — no external tools required.
-
-| Endpoint | Description |
+| Serviço | URL |
 |---|---|
-| `GET /metrics` | JSON snapshot of live metrics |
-| `GET /debug` | Live browser dashboard (auto-refreshes every 5s) |
+| Chat (frontend) | http://localhost:3000 |
+| API Go | http://localhost:8080 |
+| Dashboard de métricas | http://localhost:8080/debug |
 
-### Metrics tracked
+> **Obtendo a chave Groq:** acesse [console.groq.com](https://console.groq.com) → API Keys → Create API Key. É gratuito.
 
-| Metric | Description |
+---
+
+## Arquitetura
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Usuário                               │
+└─────────────────────┬───────────────────────────────────────┘
+                      │ pergunta em linguagem natural
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Next.js Frontend  :3000                         │
+│                                                             │
+│  ┌──────────────┐    ┌──────────────────────────────────┐   │
+│  │  Chat UI     │    │  AI Agent  /api/chat             │   │
+│  │  (useChat)   │───▶│  Vercel AI SDK + Groq LLM        │   │
+│  └──────────────┘    │  llama-3.3-70b-versatile         │   │
+│                      └──────────────┬───────────────────┘   │
+└─────────────────────────────────────┼───────────────────────┘
+                                      │ tool calls
+                                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Go API  :8080                                   │
+│                                                             │
+│  ┌──────────┐  ┌───────────┐  ┌────────────────────────┐   │
+│  │ /weather │  │ /forecast │  │ /metrics  /debug        │   │
+│  └────┬─────┘  └─────┬─────┘  └────────────────────────┘   │
+│       │              │                                       │
+│  ┌────▼──────────────▼────┐                                 │
+│  │   Cache in-memory      │  TTL 5 min                      │
+│  └────────────┬───────────┘                                 │
+└───────────────┼─────────────────────────────────────────────┘
+                │ HTTP
+                ▼
+┌─────────────────────────────┐
+│  Open-Meteo API (gratuita)  │  dados meteorológicos globais
+└─────────────────────────────┘
+```
+
+### Fluxo de uma pergunta
+
+1. Usuário digita *"Vai chover em Lisboa amanhã?"* no chat
+2. `useChat` envia a mensagem para `/api/chat` (Next.js)
+3. O agent normaliza as mensagens (UIMessage → ModelMessage) e chama o Groq
+4. O LLM decide chamar a tool `getForecast` com `city="Lisboa"` e `days=1`
+5. O agent faz GET `http://api:8080/forecast?city=Lisboa&days=1`
+6. A API Go consulta o cache; se miss, chama a Open-Meteo e armazena
+7. O LLM recebe os dados e gera a resposta em streaming para o usuário
+
+---
+
+## Endpoints da API Go
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/health` | Status do serviço com uptime |
+| GET | `/weather?city={city}` | Condições atuais |
+| GET | `/forecast?city={city}&days={n}` | Previsão de 1–7 dias |
+| GET | `/metrics` | Snapshot JSON de métricas ao vivo |
+| GET | `/debug` | Dashboard visual de métricas (auto-refresh 5s) |
+
+### Exemplos
+
+```bash
+curl "localhost:8080/weather?city=São Paulo"
+curl "localhost:8080/forecast?city=Lisboa&days=5"
+curl "localhost:8080/metrics"
+```
+
+### Códigos de status
+
+| Código | Situação |
 |---|---|
-| `total_requests` | All HTTP requests since startup |
-| `total_errors` | Requests that returned 4xx or 5xx |
-| `error_rate_pct` | Percentage of errored requests |
-| `p95_latency_ms` | 95th percentile response time (histogram buckets: <10ms, <50ms, <100ms, <500ms, ≥500ms) |
-| `cache_hits` | Successful cache lookups |
-| `cache_misses` | Cache misses (including expired entries) |
-| `cache_hit_rate_pct` | Percentage of cache lookups served from cache |
+| 200 | Sucesso |
+| 400 | Parâmetro ausente ou inválido |
+| 404 | Cidade não encontrada |
+| 502 | Falha ao buscar dados na Open-Meteo |
 
-Open `http://localhost:8080/debug` after starting the server to see the live dashboard.
+---
+
+## Observabilidade
+
+O dashboard de métricas roda embutido na própria API — sem Prometheus, sem Grafana, sem configuração extra.
+
+**Abra `http://localhost:8080/debug`** após subir o projeto.
+
+```
+┌──────────────┬──────────────┬───────────────────────┐
+│ Total Req.   │ Error Rate   │     Latency P95        │
+│   1,247      │   0.8%  ●ok  │       142ms            │
+├──────────────┴──────────────┴───────────────────────┤
+│ Cache Hit Rate   ████████░░   78.6%                  │
+│                  980 hits / 1247 total lookups        │
+├─────────────────────────────────────────────────────┤
+│ ● live — refreshing every 5s              [pause]    │
+└─────────────────────────────────────────────────────┘
+```
+
+| Métrica | Descrição |
+|---|---|
+| `total_requests` | Total de requests desde o startup |
+| `total_errors` | Requests com status 4xx ou 5xx |
+| `error_rate_pct` | Taxa de erro em % |
+| `p95_latency_ms` | Latência no percentil 95 (histograma: <10ms / <50ms / <100ms / <500ms / ≥500ms) |
+| `cache_hits` | Lookups servidos do cache |
+| `cache_misses` | Lookups que foram à Open-Meteo |
+| `cache_hit_rate_pct` | Taxa de cache hits em % |
+
+Endpoint JSON: `GET /metrics`
+
+---
+
+## Decisões técnicas
+
+### Por que Vercel AI SDK?
+
+Integração nativa com Next.js, streaming de respostas sem boilerplate, e suporte a tool calling com tipagem TypeScript. Alternativas consideradas: LangChain.js (mais pesado, overkill para um agent single-purpose) e chamadas diretas à API Groq (sem streaming nem tool loop gerenciado).
+
+### Por que Groq + llama-3.3-70b?
+
+Velocidade de inferência ~10× maior que providers tradicionais, tier gratuito generoso para desenvolvimento, e o llama-3.3-70b tem excelente desempenho em tool calling e respostas multilíngues.
+
+### Por que Open-Meteo?
+
+Zero configuração — não exige API key, é gratuita, tem cobertura global e dados precisos. Elimina uma dependência de cadastro no setup do projeto.
+
+### Por que cache in-memory com TTL de 5 minutos?
+
+Dados meteorológicos mudam lentamente. Um TTL de 5 minutos é suficiente para evitar chamadas repetidas à Open-Meteo sem servir dados desatualizados. Para deploy single-instance (caso de uso atual), in-memory é mais simples e performático que Redis.
+
+### Por que Gin (Go)?
+
+Framework HTTP mais adotado no ecossistema Go, middleware ecosystem maduro, performance adequada para uma API de previsão do tempo.
+
+### Por que `log/slog` com JSON?
+
+Stdlib do Go 1.21+, sem dependências externas. Saída em JSON é diretamente ingestível por qualquer stack de log aggregation (Loki, CloudWatch, Datadog).
+
+### Observabilidade embutida
+
+Em vez de adicionar Prometheus + Grafana ao `docker-compose.yml`, a API expõe `/metrics` (JSON) e `/debug` (dashboard HTML com `go:embed`). Zero dependências externas, funciona com um único `docker compose up`, e demonstra o mesmo conceito de forma mais acessível.
+
+---
 
 ## Testes
 
 ```bash
-# Testes unitários (Go)
+# Unitários (Go)
 cd api && go test ./...
 
-# Testes de integração (requer servidor rodando)
+# Com verbose
+cd api && go test ./... -v
+
+# Integração (requer a API rodando)
 cd api && go test -tags=integration ./...
+
+# Frontend (TypeScript)
+cd web && node --test lib/chat-messages.test.mts
 ```
 
-## Decisões Técnicas
+---
 
-| Decisão | Escolha | Motivo |
-|---------|---------|--------|
-| Agent Framework | Vercel AI SDK | Integração nativa com Next.js, streaming built-in, tool calling simples |
-| LLM | Groq (llama-3.3-70b) | Alta velocidade, tier gratuito generoso, ótimo tool calling |
-| Weather API | Open-Meteo | Gratuita, sem API key, dados precisos e globais |
-| HTTP Framework (Go) | Gin | Amplamente adotado, bom middleware ecosystem |
-| Cache | In-memory (TTL 5min) | Zero dependência, adequado para escala single-instance |
-| Logs | log/slog (JSON) | Stdlib Go 1.21+, estruturado, pronto para ingestão em log aggregators |
+## Considerações para produção
 
-## Considerações para Produção
-
-- **Cache distribuído**: substituir map in-memory por Redis para múltiplas instâncias
-- **Secrets**: usar um secrets manager (AWS Secrets Manager, HashiCorp Vault) para `GROQ_API_KEY`
-- **TLS**: terminar HTTPS no load balancer (AWS ALB, Cloudflare)
-- **Rate limiting**: adicionar middleware de rate limit por IP na API Go
-- **Retry com backoff**: nas chamadas à Open-Meteo para resiliência a falhas transitórias
-- **Observabilidade**: exportar métricas para Prometheus + Grafana; traces com OpenTelemetry
-- **Deploy sugerido**: API Go → Railway ou Fly.io | Next.js → Vercel
+| Área | Recomendação |
+|---|---|
+| Cache | Substituir in-memory por **Redis** para suportar múltiplas instâncias |
+| Secrets | Usar secrets manager (AWS Secrets Manager, HashiCorp Vault) para `GROQ_API_KEY` |
+| TLS | Terminar HTTPS no load balancer (AWS ALB, Cloudflare) |
+| Rate limiting | Middleware de rate limit por IP na API Go |
+| Resiliência | Retry com exponential backoff nas chamadas à Open-Meteo |
+| Observabilidade | Exportar métricas para Prometheus + Grafana; traces com OpenTelemetry |
+| Deploy | API Go → Railway / Fly.io · Frontend → Vercel |
