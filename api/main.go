@@ -29,6 +29,8 @@ func main() {
 	r.GET("/health", handler.Health)
 	r.GET("/weather", handler.Weather(memCache))
 	r.GET("/forecast", handler.Forecast(memCache))
+	r.GET("/metrics", handler.Metrics)
+	r.GET("/debug", handler.Debug)
 
 	slog.Info("server starting", "port", port)
 	if err := r.Run(":" + port); err != nil {
