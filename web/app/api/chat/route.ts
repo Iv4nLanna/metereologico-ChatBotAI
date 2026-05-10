@@ -1,5 +1,6 @@
 import { createGroq } from "@ai-sdk/groq"
-import { streamText } from "ai"
+import { stepCountIs, streamText } from "ai"
+import { normalizeChatMessages } from "@/lib/chat-messages"
 import { weatherTools } from "@/lib/weather-tools"
 
 const groq = createGroq({
@@ -25,9 +26,9 @@ export async function POST(req: Request) {
   const result = streamText({
     model: groq("llama-3.3-70b-versatile"),
     system: SYSTEM_PROMPT,
-    messages,
+    messages: await normalizeChatMessages(messages),
     tools: weatherTools,
-    maxSteps: 3,
+    stopWhen: stepCountIs(3),
   })
 
   return result.toUIMessageStreamResponse()
