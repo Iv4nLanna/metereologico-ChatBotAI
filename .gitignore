@@ -1,0 +1,13 @@
+# Go
+api/server
+*.exe
+
+# Node
+web/node_modules/
+web/.next/
+web/.env*
+!web/.env.example
+
+# Root
+.env
+.DS_Store
