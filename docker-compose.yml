@@ -1,0 +1,24 @@
+services:
+  api:
+    build: ./api
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  web:
+    build: ./web
+    ports:
+      - "3000:3000"
+    environment:
+      API_URL: "http://api:8080"
+      GROQ_API_KEY: "${GROQ_API_KEY}"
+    depends_on:
+      api:
+        condition: service_healthy
