@@ -43,7 +43,9 @@ func TestWeather_CacheHit(t *testing.T) {
 		t.Fatalf("expected 200, got %d", w.Code)
 	}
 	var body map[string]any
-	json.Unmarshal(w.Body.Bytes(), &body)
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
 	if body["city"] != "TestCity" {
 		t.Fatalf("expected city 'TestCity', got %v", body["city"])
 	}
