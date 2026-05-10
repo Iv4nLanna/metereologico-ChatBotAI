@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 var OpenMeteoGeocodingURL = "https://geocoding-api.open-meteo.com"
+
+var geocodingClient = &http.Client{Timeout: 10 * time.Second}
 
 type GeoResult struct {
 	Latitude  float64
@@ -20,11 +23,15 @@ func Geocode(city string) (*GeoResult, error) {
 		"%s/v1/search?name=%s&count=1&language=en&format=json",
 		OpenMeteoGeocodingURL, url.QueryEscape(city),
 	)
-	resp, err := http.Get(u)
+	resp, err := geocodingClient.Get(u)
 	if err != nil {
 		return nil, fmt.Errorf("geocoding request failed: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("geocoding API returned status %d", resp.StatusCode)
+	}
 
 	var result struct {
 		Results []struct {
