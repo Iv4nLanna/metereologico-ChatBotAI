@@ -6,6 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+
+	"weather-api/metrics"
 )
 
 func Logger() gin.HandlerFunc {
@@ -17,12 +19,15 @@ func Logger() gin.HandlerFunc {
 
 		c.Next()
 
+		latencyMs := time.Since(start).Milliseconds()
+		metrics.Default.RecordRequest(c.Writer.Status(), latencyMs)
+
 		slog.Info("request",
 			"request_id", requestID,
 			"method", c.Request.Method,
 			"path", c.Request.URL.Path,
 			"status", c.Writer.Status(),
-			"latency_ms", time.Since(start).Milliseconds(),
+			"latency_ms", latencyMs,
 			"ip", c.ClientIP(),
 		)
 	}
