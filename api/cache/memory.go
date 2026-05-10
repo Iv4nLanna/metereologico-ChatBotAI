@@ -3,6 +3,8 @@ package cache
 import (
 	"sync"
 	"time"
+
+	"weather-api/metrics"
 )
 
 type entry struct {
@@ -36,8 +38,10 @@ func (m *Memory) Get(key string) (any, bool) {
 	defer m.mu.RUnlock()
 	e, ok := m.store[key]
 	if !ok || time.Now().After(e.expiresAt) {
+		metrics.Default.RecordCacheMiss()
 		return nil, false
 	}
+	metrics.Default.RecordCacheHit()
 	return e.value, true
 }
 
