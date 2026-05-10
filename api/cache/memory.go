@@ -43,6 +43,7 @@ func (m *Memory) Get(key string) (any, bool) {
 
 func (m *Memory) gc() {
 	ticker := time.NewTicker(10 * time.Minute)
+	defer ticker.Stop()
 	for range ticker.C {
 		m.mu.Lock()
 		for k, e := range m.store {
