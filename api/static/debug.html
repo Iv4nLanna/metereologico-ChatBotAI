@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WeatherBot — Live Metrics</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    header {
+      width: 100%;
+      max-width: 820px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    h1 { font-size: 1.05rem; color: #58a6ff; letter-spacing: 0.02em; }
+    .uptime { font-size: 0.8rem; color: #8b949e; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      width: 100%;
+      max-width: 820px;
+      margin-bottom: 1rem;
+    }
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+    }
+    .card-label {
+      font-size: 0.68rem;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.6rem;
+    }
+    .card-value {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: #e6edf3;
+      line-height: 1;
+    }
+    .card-value.ok  { color: #3fb950; }
+    .card-value.warn { color: #d29922; }
+    .card-value.error { color: #f85149; }
+    .card-sub {
+      font-size: 0.72rem;
+      color: #8b949e;
+      margin-top: 0.45rem;
+    }
+    .cache-card {
+      grid-column: span 3;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+    }
+    .cache-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 0.6rem;
+    }
+    .cache-bar-track {
+      background: #21262d;
+      border-radius: 4px;
+      height: 6px;
+      overflow: hidden;
+      margin-bottom: 0.45rem;
+    }
+    .cache-bar-fill {
+      height: 100%;
+      background: #58a6ff;
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+    footer {
+      width: 100%;
+      max-width: 820px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 0.25rem;
+      font-size: 0.72rem;
+      color: #8b949e;
+    }
+    .dot-live   { color: #3fb950; }
+    .dot-paused { color: #f0883e; }
+    #pause-btn {
+      background: #21262d;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      border-radius: 4px;
+      padding: 0.2rem 0.8rem;
+      font-family: inherit;
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    #pause-btn:hover { background: #30363d; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>⛅ WeatherBot &mdash; Live Metrics</h1>
+    <span class="uptime" id="uptime">uptime: —</span>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-label">Total Requests</div>
+      <div class="card-value" id="total-req">—</div>
+      <div class="card-sub">all endpoints</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Error Rate</div>
+      <div class="card-value" id="error-rate">—</div>
+      <div class="card-sub">4xx + 5xx responses</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Latency P95</div>
+      <div class="card-value" id="p95">—</div>
+      <div class="card-sub">95th percentile</div>
+    </div>
+    <div class="cache-card">
+      <div class="cache-header">
+        <span class="card-label">Cache Hit Rate</span>
+        <span class="card-value" id="cache-rate" style="font-size:1.6rem">—</span>
+      </div>
+      <div class="cache-bar-track">
+        <div class="cache-bar-fill" id="cache-bar" style="width:0%"></div>
+      </div>
+      <div class="card-sub" id="cache-sub">hits / total lookups</div>
+    </div>
+  </div>
+
+  <footer>
+    <span id="status"><span class="dot-live">●</span> live &mdash; refreshing every 5s</span>
+    <button id="pause-btn">pause</button>
+  </footer>
+
+  <script>
+    let paused = false;
+    let timer;
+
+    function fmtUptime(s) {
+      if (s < 60)   return s + 's';
+      if (s < 3600) return Math.floor(s/60) + 'm ' + (s%60) + 's';
+      return Math.floor(s/3600) + 'h ' + Math.floor((s%3600)/60) + 'm';
+    }
+
+    function errorClass(pct) {
+      if (pct === 0)  return 'ok';
+      if (pct < 5)    return 'warn';
+      return 'error';
+    }
+
+    async function refresh() {
+      try {
+        const res = await fetch('/metrics');
+        if (!res.ok) throw new Error();
+        const d = await res.json();
+
+        document.getElementById('uptime').textContent = 'uptime: ' + fmtUptime(d.uptime_seconds);
+        document.getElementById('total-req').textContent = d.total_requests.toLocaleString();
+
+        const errEl = document.getElementById('error-rate');
+        errEl.textContent = d.error_rate_pct.toFixed(1) + '%';
+        errEl.className = 'card-value ' + errorClass(d.error_rate_pct);
+
+        document.getElementById('p95').textContent = d.p95_latency_ms + 'ms';
+
+        const rate = d.cache_hit_rate_pct;
+        document.getElementById('cache-rate').textContent = rate.toFixed(1) + '%';
+        document.getElementById('cache-bar').style.width = Math.min(rate, 100) + '%';
+        const total = d.cache_hits + d.cache_misses;
+        document.getElementById('cache-sub').textContent =
+          d.cache_hits.toLocaleString() + ' hits / ' + total.toLocaleString() + ' total lookups';
+      } catch (_) {
+        document.getElementById('uptime').textContent = '— connection lost —';
+      }
+    }
+
+    document.getElementById('pause-btn').addEventListener('click', function() {
+      paused = !paused;
+      if (paused) {
+        clearInterval(timer);
+        this.textContent = 'resume';
+        document.getElementById('status').innerHTML =
+          '<span class="dot-paused">⏸</span> paused';
+      } else {
+        refresh();
+        timer = setInterval(refresh, 5000);
+        this.textContent = 'pause';
+        document.getElementById('status').innerHTML =
+          '<span class="dot-live">●</span> live &mdash; refreshing every 5s';
+      }
+    });
+
+    refresh();
+    timer = setInterval(refresh, 5000);
+  </script>
+</body>
+</html>
