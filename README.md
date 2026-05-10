@@ -32,6 +32,29 @@ docker compose up --build
 | GET | `/weather?city={city}` | `curl "localhost:8080/weather?city=Curitiba"` |
 | GET | `/forecast?city={city}&days={n}` | `curl "localhost:8080/forecast?city=SP&days=3"` |
 
+## Observability
+
+The API exposes two built-in observability endpoints — no external tools required.
+
+| Endpoint | Description |
+|---|---|
+| `GET /metrics` | JSON snapshot of live metrics |
+| `GET /debug` | Live browser dashboard (auto-refreshes every 5s) |
+
+### Metrics tracked
+
+| Metric | Description |
+|---|---|
+| `total_requests` | All HTTP requests since startup |
+| `total_errors` | Requests that returned 4xx or 5xx |
+| `error_rate_pct` | Percentage of errored requests |
+| `p95_latency_ms` | 95th percentile response time (histogram buckets: <10ms, <50ms, <100ms, <500ms, ≥500ms) |
+| `cache_hits` | Successful cache lookups |
+| `cache_misses` | Cache misses (including expired entries) |
+| `cache_hit_rate_pct` | Percentage of cache lookups served from cache |
+
+Open `http://localhost:8080/debug` after starting the server to see the live dashboard.
+
 ## Testes
 
 ```bash
