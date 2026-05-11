@@ -2,7 +2,6 @@
 
 Plataforma de previsão do tempo com **API REST em Go** e **AI Agent em Next.js** que responde perguntas em linguagem natural sobre o clima de qualquer cidade do mundo.
 
-**Repositório:** [github.com/Iv4nLanna/metereologico-ChatBotAI](https://github.com/Iv4nLanna/metereologico-ChatBotAI)
 
 ---
 
