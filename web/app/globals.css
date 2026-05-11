@@ -24,6 +24,12 @@ body {
   color: var(--bf-black);
 }
 
+/* Neobrutalist focus indicator for keyboard navigation */
+input:focus-visible {
+  outline: 3px solid #000;
+  outline-offset: 0;
+}
+
 /* Neobrutalist button — offset shadow + hover lift, skip when disabled */
 .bf-btn {
   box-shadow: var(--bf-shadow-sm);
