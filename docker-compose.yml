@@ -19,6 +19,7 @@ services:
     environment:
       API_URL: "http://api:8080"
       GROQ_API_KEY: "${GROQ_API_KEY}"
+      NEXT_OUTPUT: "standalone"
     depends_on:
       api:
         condition: service_healthy
