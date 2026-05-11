@@ -2,6 +2,8 @@
 
 Plataforma de previsão do tempo com **API Go** e **AI Agent em Next.js** que responde perguntas em linguagem natural sobre o clima.
 
+**Demo ao vivo:** [metereologico-chat-bot-ai.vercel.app](https://metereologico-chat-bot-ai.vercel.app) · [API](https://chatbot-production-a38f.up.railway.app/health)
+
 ---
 
 ## Início rápido
@@ -185,14 +187,35 @@ cd web && node --test lib/chat-messages.test.mts
 
 ---
 
-## Considerações para produção
+## Deploy em produção
+
+O projeto roda separado em dois serviços especializados:
+
+### Por que Vercel (frontend)?
+
+Vercel é a plataforma criada pelos autores do Next.js — tem integração nativa, detecta o framework automaticamente e faz CI/CD a cada push no GitHub sem configuração. Edge network global garante baixa latência para o usuário. Tier gratuito suficiente para demos e projetos pessoais.
+
+### Por que Railway (API Go)?
+
+Railway faz deploy a partir do `Dockerfile` existente no repositório, sem exigir configuração de servidor ou Kubernetes. Injeta a variável `PORT` automaticamente (que o servidor Go já lê), tem deploy contínuo via GitHub e expõe HTTPS com domínio gerado automaticamente. Alternativa natural ao Heroku com DX moderna.
+
+### Separação de responsabilidades
+
+O frontend (Vercel) chama a API (Railway) server-side — a `GROQ_API_KEY` e a `API_URL` nunca chegam ao browser. Essa separação também permite escalar os serviços de forma independente.
+
+| Serviço | Plataforma | URL |
+|---|---|---|
+| Frontend | Vercel | [metereologico-chat-bot-ai.vercel.app](https://metereologico-chat-bot-ai.vercel.app) |
+| API Go | Railway | [chatbot-production-a38f.up.railway.app](https://chatbot-production-a38f.up.railway.app/health) |
+
+---
+
+## Considerações para evolução
 
 | Área | Recomendação |
 |---|---|
 | Cache | Substituir in-memory por **Redis** para suportar múltiplas instâncias |
 | Secrets | Usar secrets manager (AWS Secrets Manager, HashiCorp Vault) para `GROQ_API_KEY` |
-| TLS | Terminar HTTPS no load balancer (AWS ALB, Cloudflare) |
 | Rate limiting | Middleware de rate limit por IP na API Go |
 | Resiliência | Retry com exponential backoff nas chamadas à Open-Meteo |
 | Observabilidade | Exportar métricas para Prometheus + Grafana; traces com OpenTelemetry |
-| Deploy | API Go → Railway / Fly.io · Frontend → Vercel |
