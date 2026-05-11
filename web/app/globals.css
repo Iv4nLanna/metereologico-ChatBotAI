@@ -17,6 +17,7 @@
 }
 
 body {
+  min-height: 100vh;
   background-color: var(--bf-cream);
   background-image: radial-gradient(circle, #000 1.2px, transparent 1.2px);
   background-size: 24px 24px;

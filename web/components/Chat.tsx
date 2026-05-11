@@ -50,29 +50,29 @@ export default function Chat() {
 
   return (
     <div
-      className="flex flex-col h-screen w-full max-w-[680px] mx-auto bg-white"
-      style={{ borderLeft: "4px solid #000", borderRight: "4px solid #000", boxShadow: "var(--bf-shadow)" }}
+      className="flex flex-col w-full max-w-[680px] mx-auto my-8 bg-white"
+      style={{ border: "4px solid #000", boxShadow: "var(--bf-shadow)", height: "calc(100vh - 4rem)" }}
     >
       <header
-        className="flex-none p-4 bg-white"
+        className="flex-none p-6 bg-white"
         style={{ borderBottom: "4px solid #000" }}
       >
-        <div className="flex flex-col items-center gap-1">
+        <div className="flex flex-col items-center gap-2">
+          <span
+            className="text-5xl font-black uppercase tracking-tight"
+            style={{ fontFamily: "var(--font-space-grotesk)" }}
+          >
+            WeatherBot
+          </span>
           <span
             className="text-xs font-bold uppercase tracking-widest px-2 py-0.5"
             style={{
               fontFamily: "var(--font-space-grotesk)",
-              background: "var(--bf-yellow)",
+              background: "var(--bf-pink)",
               border: "2px solid #000",
             }}
           >
             Assistente Climático
-          </span>
-          <span
-            className="text-2xl font-black uppercase tracking-tight"
-            style={{ fontFamily: "var(--font-space-grotesk)" }}
-          >
-            WeatherBot
           </span>
         </div>
       </header>
