@@ -148,6 +148,8 @@ Stdlib do Go 1.21+, sem dependências externas. Saída em JSON é diretamente in
 
 Em vez de adicionar Prometheus + Grafana ao `docker-compose.yml`, a API expõe `/metrics` (JSON) e `/debug` (dashboard HTML com `go:embed`). Zero dependências externas, zero configuração extra, demonstra o mesmo conceito de forma acessível.
 
+> **Nota sobre segurança:** os endpoints `/metrics` e `/debug` estão intencionalmente públicos neste projeto para facilitar a avaliação — qualquer pessoa com a URL pode inspecionar as métricas ao vivo. Em um ambiente profissional, esses endpoints seriam protegidos por autenticação (ex: token Bearer via variável de ambiente), pois expõem informações operacionais internas como taxa de erros, latência e uptime do serviço.
+
 ### Por que Vercel + Railway?
 
 O frontend (Vercel) chama a API (Railway) server-side — `GROQ_API_KEY` e `API_URL` nunca chegam ao browser. Vercel tem integração nativa com Next.js e CI/CD automático via GitHub. Railway faz deploy direto a partir do `Dockerfile` existente, injeta `PORT` automaticamente e expõe HTTPS sem configuração de servidor.
