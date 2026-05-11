@@ -41,11 +41,13 @@ export default function Message({ message }: Props) {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-3`}>
       <div
-        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
-          isUser
-            ? "bg-blue-500 text-white rounded-br-sm"
-            : "bg-gray-100 text-gray-800 rounded-bl-sm"
-        }`}
+        className="max-w-xs lg:max-w-md px-4 py-2"
+        style={{
+          background: isUser ? "var(--bf-pink)" : "var(--bf-white)",
+          border: "3px solid #000",
+          boxShadow: "var(--bf-shadow-sm)",
+          fontFamily: "var(--font-inter)",
+        }}
       >
         <p className="text-sm whitespace-pre-wrap">{textContent}</p>
         {city && <WeatherBadge city={city} />}
