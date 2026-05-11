@@ -49,14 +49,35 @@ export default function Chat() {
   }
 
   return (
-    <div className="flex flex-col h-screen max-w-2xl mx-auto">
-      <header className="flex-none p-4 border-b bg-white">
-        <div className="text-center">
-          <span className="font-semibold text-gray-800">⛅ WeatherBot</span>
+    <div
+      className="flex flex-col h-screen w-full max-w-[680px] mx-auto bg-white"
+      style={{ borderLeft: "4px solid #000", borderRight: "4px solid #000", boxShadow: "var(--bf-shadow)" }}
+    >
+      <header
+        className="flex-none p-4 bg-white"
+        style={{ borderBottom: "4px solid #000" }}
+      >
+        <div className="flex flex-col items-center gap-1">
+          <span
+            className="text-xs font-bold uppercase tracking-widest px-2 py-0.5"
+            style={{
+              fontFamily: "var(--font-space-grotesk)",
+              background: "var(--bf-yellow)",
+              border: "2px solid #000",
+            }}
+          >
+            Assistente Climático
+          </span>
+          <span
+            className="text-2xl font-black uppercase tracking-tight"
+            style={{ fontFamily: "var(--font-space-grotesk)" }}
+          >
+            WeatherBot
+          </span>
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-4 space-y-4">
+      <main className="flex-1 overflow-y-auto p-4 space-y-4 bg-white">
         {messages.length === 0 && (
           <SuggestionChips onSelect={handleSuggestion} />
         )}
@@ -67,11 +88,14 @@ export default function Chat() {
           ))}
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 rounded-2xl rounded-bl-none px-4 py-2">
-              <div className="flex gap-1 items-center h-5">
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+            <div
+              className="px-4 py-3 bg-white"
+              style={{ border: "2px solid #000", boxShadow: "var(--bf-shadow-sm)" }}
+            >
+              <div className="flex gap-1.5 items-center h-4">
+                <span className="w-2 h-2 bg-black animate-bounce [animation-delay:-0.3s]" />
+                <span className="w-2 h-2 bg-black animate-bounce [animation-delay:-0.15s]" />
+                <span className="w-2 h-2 bg-black animate-bounce" />
               </div>
             </div>
           </div>
@@ -79,19 +103,32 @@ export default function Chat() {
         <div ref={bottomRef} />
       </main>
 
-      <footer className="flex-none p-4 border-t bg-white">
+      <footer
+        className="flex-none p-4 bg-white"
+        style={{ borderTop: "4px solid #000" }}
+      >
         <form onSubmit={handleSubmit} className="flex gap-2">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ex: Vai chover em São Paulo amanhã?"
-            className="flex-1 border border-gray-200 rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+            className="flex-1 px-4 py-2 text-sm outline-none"
+            style={{
+              background: "var(--bf-offwhite)",
+              border: "4px solid #000",
+              fontFamily: "var(--font-inter)",
+            }}
             disabled={isLoading}
           />
           <button
             type="submit"
             disabled={isLoading || !input.trim()}
-            className="bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white rounded-full px-5 py-2 text-sm font-medium transition-colors"
+            className="bf-btn px-5 py-2 text-sm font-black uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: "var(--bf-pink)",
+              border: "3px solid #000",
+              fontFamily: "var(--font-space-grotesk)",
+            }}
           >
             Enviar
           </button>
