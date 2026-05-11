@@ -2,28 +2,15 @@
 
 Plataforma de previsão do tempo com **API Go** e **AI Agent em Next.js** que responde perguntas em linguagem natural sobre o clima.
 
-**Demo ao vivo:** [metereologico-chat-bot-ai.vercel.app](https://metereologico-chat-bot-ai.vercel.app) · [API](https://chatbot-production-a38f.up.railway.app/health)
-
 ---
 
-## Início rápido
+## Demo ao vivo
 
-**Pré-requisitos:** Docker Desktop + chave gratuita do [Groq](https://console.groq.com)
-
-```bash
-git clone https://github.com/Iv4nLanna/medereologico-ChatBotAI.git
-cd medereologico-ChatBotAI
-cp .env.example .env          # edite .env e insira sua GROQ_API_KEY
-docker compose up --build
-```
-
-| Serviço | URL |
+| | URL |
 |---|---|
-| Chat (frontend) | http://localhost:3000 |
-| API Go | http://localhost:8080 |
-| Dashboard de métricas | http://localhost:8080/debug |
-
-> **Obtendo a chave Groq:** acesse [console.groq.com](https://console.groq.com) → API Keys → Create API Key. É gratuito.
+| Chat | [metereologico-chat-bot-ai.vercel.app](https://metereologico-chat-bot-ai.vercel.app) |
+| API | [chatbot-production-a38f.up.railway.app/health](https://chatbot-production-a38f.up.railway.app/health) |
+| Dashboard de métricas | [chatbot-production-a38f.up.railway.app/debug](https://chatbot-production-a38f.up.railway.app/debug) |
 
 ---
 
@@ -36,7 +23,7 @@ docker compose up --build
                       │ pergunta em linguagem natural
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              Next.js Frontend  :3000                         │
+│              Next.js Frontend  (Vercel)                      │
 │                                                             │
 │  ┌──────────────┐    ┌──────────────────────────────────┐   │
 │  │  Chat UI     │    │  AI Agent  /api/chat             │   │
@@ -44,10 +31,10 @@ docker compose up --build
 │  └──────────────┘    │  llama-3.3-70b-versatile         │   │
 │                      └──────────────┬───────────────────┘   │
 └─────────────────────────────────────┼───────────────────────┘
-                                      │ tool calls
+                                      │ tool calls (server-side)
                                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              Go API  :8080                                   │
+│              Go API  (Railway)                               │
 │                                                             │
 │  ┌──────────┐  ┌───────────┐  ┌────────────────────────┐   │
 │  │ /weather │  │ /forecast │  │ /metrics  /debug        │   │
@@ -70,13 +57,13 @@ docker compose up --build
 2. `useChat` envia a mensagem para `/api/chat` (Next.js)
 3. O agent normaliza as mensagens (UIMessage → ModelMessage) e chama o Groq
 4. O LLM decide chamar a tool `getForecast` com `city="Lisboa"` e `days=1`
-5. O agent faz GET `http://api:8080/forecast?city=Lisboa&days=1`
-6. A API Go consulta o cache; se miss, chama a Open-Meteo e armazena
+5. O agent faz GET na API Go: `/forecast?city=Lisboa&days=1`
+6. A API consulta o cache; se miss, chama a Open-Meteo e armazena
 7. O LLM recebe os dados e gera a resposta em streaming para o usuário
 
 ---
 
-## Endpoints da API Go
+## Endpoints da API
 
 | Método | Rota | Descrição |
 |---|---|---|
@@ -86,15 +73,11 @@ docker compose up --build
 | GET | `/metrics` | Snapshot JSON de métricas ao vivo |
 | GET | `/debug` | Dashboard visual de métricas (auto-refresh 5s) |
 
-### Exemplos
-
 ```bash
-curl "localhost:8080/weather?city=São Paulo"
-curl "localhost:8080/forecast?city=Lisboa&days=5"
-curl "localhost:8080/metrics"
+curl "https://chatbot-production-a38f.up.railway.app/weather?city=São Paulo"
+curl "https://chatbot-production-a38f.up.railway.app/forecast?city=Lisboa&days=5"
+curl "https://chatbot-production-a38f.up.railway.app/metrics"
 ```
-
-### Códigos de status
 
 | Código | Situação |
 |---|---|
@@ -107,9 +90,9 @@ curl "localhost:8080/metrics"
 
 ## Observabilidade
 
-O dashboard de métricas roda embutido na própria API — sem Prometheus, sem Grafana, sem configuração extra.
+Dashboard embutido na API — sem Prometheus, sem Grafana, sem configuração extra.
 
-**Abra `http://localhost:8080/debug`** após subir o projeto.
+**Acesse ao vivo:** [chatbot-production-a38f.up.railway.app/debug](https://chatbot-production-a38f.up.railway.app/debug)
 
 ```
 ┌──────────────┬──────────────┬───────────────────────┐
@@ -132,8 +115,6 @@ O dashboard de métricas roda embutido na própria API — sem Prometheus, sem G
 | `cache_hits` | Lookups servidos do cache |
 | `cache_misses` | Lookups que foram à Open-Meteo |
 | `cache_hit_rate_pct` | Taxa de cache hits em % |
-
-Endpoint JSON: `GET /metrics`
 
 ---
 
@@ -165,7 +146,30 @@ Stdlib do Go 1.21+, sem dependências externas. Saída em JSON é diretamente in
 
 ### Observabilidade embutida
 
-Em vez de adicionar Prometheus + Grafana ao `docker-compose.yml`, a API expõe `/metrics` (JSON) e `/debug` (dashboard HTML com `go:embed`). Zero dependências externas, funciona com um único `docker compose up`, e demonstra o mesmo conceito de forma mais acessível.
+Em vez de adicionar Prometheus + Grafana ao `docker-compose.yml`, a API expõe `/metrics` (JSON) e `/debug` (dashboard HTML com `go:embed`). Zero dependências externas, zero configuração extra, demonstra o mesmo conceito de forma acessível.
+
+### Por que Vercel + Railway?
+
+O frontend (Vercel) chama a API (Railway) server-side — `GROQ_API_KEY` e `API_URL` nunca chegam ao browser. Vercel tem integração nativa com Next.js e CI/CD automático via GitHub. Railway faz deploy direto a partir do `Dockerfile` existente, injeta `PORT` automaticamente e expõe HTTPS sem configuração de servidor.
+
+---
+
+## Rodando localmente
+
+**Pré-requisitos:** Docker Desktop + chave gratuita do [Groq](https://console.groq.com)
+
+```bash
+git clone https://github.com/Iv4nLanna/medereologico-ChatBotAI.git
+cd medereologico-ChatBotAI
+cp .env.example .env          # edite .env e insira sua GROQ_API_KEY
+docker compose up --build
+```
+
+| Serviço | URL |
+|---|---|
+| Chat | http://localhost:3000 |
+| API Go | http://localhost:8080 |
+| Dashboard de métricas | http://localhost:8080/debug |
 
 ---
 
@@ -175,38 +179,12 @@ Em vez de adicionar Prometheus + Grafana ao `docker-compose.yml`, a API expõe `
 # Unitários (Go)
 cd api && go test ./...
 
-# Com verbose
-cd api && go test ./... -v
-
 # Integração (requer a API rodando)
 cd api && go test -tags=integration ./...
 
 # Frontend (TypeScript)
 cd web && node --test lib/chat-messages.test.mts
 ```
-
----
-
-## Deploy em produção
-
-O projeto roda separado em dois serviços especializados:
-
-### Por que Vercel (frontend)?
-
-Vercel é a plataforma criada pelos autores do Next.js — tem integração nativa, detecta o framework automaticamente e faz CI/CD a cada push no GitHub sem configuração. Edge network global garante baixa latência para o usuário. Tier gratuito suficiente para demos e projetos pessoais.
-
-### Por que Railway (API Go)?
-
-Railway faz deploy a partir do `Dockerfile` existente no repositório, sem exigir configuração de servidor ou Kubernetes. Injeta a variável `PORT` automaticamente (que o servidor Go já lê), tem deploy contínuo via GitHub e expõe HTTPS com domínio gerado automaticamente. Alternativa natural ao Heroku com DX moderna.
-
-### Separação de responsabilidades
-
-O frontend (Vercel) chama a API (Railway) server-side — a `GROQ_API_KEY` e a `API_URL` nunca chegam ao browser. Essa separação também permite escalar os serviços de forma independente.
-
-| Serviço | Plataforma | URL |
-|---|---|---|
-| Frontend | Vercel | [metereologico-chat-bot-ai.vercel.app](https://metereologico-chat-bot-ai.vercel.app) |
-| API Go | Railway | [chatbot-production-a38f.up.railway.app](https://chatbot-production-a38f.up.railway.app/health) |
 
 ---
 
