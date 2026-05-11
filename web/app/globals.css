@@ -1,26 +1,53 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bf-cream: #FFDC8B;
+  --bf-pink: #FE90E8;
+  --bf-yellow: #F7CB46;
+  --bf-black: #000000;
+  --bf-white: #FFFFFF;
+  --bf-offwhite: #FFFDF5;
+  --bf-shadow-sm: 4px 4px 0px #000000;
+  --bf-shadow: 8px 8px 0px #000000;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-space-grotesk);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bf-cream);
+  background-image: radial-gradient(circle, #000 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
+  font-family: var(--font-inter), Inter, sans-serif;
+  color: var(--bf-black);
+}
+
+/* Neobrutalist button — offset shadow + hover lift, skip when disabled */
+.bf-btn {
+  box-shadow: var(--bf-shadow-sm);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.bf-btn:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px #000;
+}
+.bf-btn:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+/* Neobrutalist chip — same hover lift */
+.bf-chip {
+  box-shadow: var(--bf-shadow-sm);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.bf-chip:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px #000;
+}
+.bf-chip:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
 }
