@@ -121,7 +121,7 @@ curl "https://chatbot-production-a38f.up.railway.app/forecast?city=Lisboa&days=5
 
 ## Observabilidade
 
-Dashboard embutido sem dependências externas — sem Prometheus, sem Grafana.
+Dashboard embutido, sem dependências externas — sem Prometheus e sem Grafana. (Fiz isso pensando em facilitar no caso de ser um projeto pequeno, mas em produção, em um sistema escalável, seria imprescindível utilizar Grafana e Prometheus.)
 
 **Acesse ao vivo:** [chatbot-production-a38f.up.railway.app/debug](https://chatbot-production-a38f.up.railway.app/debug)
 
