@@ -1,16 +1,52 @@
 # Weather Platform ⛅
 
-Plataforma de previsão do tempo com **API Go** e **AI Agent em Next.js** que responde perguntas em linguagem natural sobre o clima.
+Plataforma de previsão do tempo com **API REST em Go** e **AI Agent em Next.js** que responde perguntas em linguagem natural sobre o clima de qualquer cidade do mundo.
+
+**Repositório:** [github.com/Iv4nLanna/metereologico-ChatBotAI](https://github.com/Iv4nLanna/metereologico-ChatBotAI)
 
 ---
 
-## Demo ao vivo
+## Acesso ao projeto (deploy em produção)
 
-| | URL |
+> Tudo já está deployado e funcionando. **Não é necessário rodar nada localmente para avaliar.**
+
+### Interface principal
+
+**[metereologico-chat-bot-ai.vercel.app](https://metereologico-chat-bot-ai.vercel.app)**
+
+Acesse o link acima e faça perguntas como:
+- *"Vai chover em São Paulo amanhã?"*
+- *"Qual a temperatura em Lisboa agora?"*
+- *"Previsão para Curitiba nos próximos 5 dias"*
+- *"Como está o tempo em Tokyo hoje?"*
+
+### API Go (backend)
+
+| Endpoint | Link |
 |---|---|
-| Chat | [metereologico-chat-bot-ai.vercel.app](https://metereologico-chat-bot-ai.vercel.app) |
-| API | [chatbot-production-a38f.up.railway.app/health](https://chatbot-production-a38f.up.railway.app/health) |
-| Dashboard de métricas | [chatbot-production-a38f.up.railway.app/debug](https://chatbot-production-a38f.up.railway.app/debug) |
+| Health check | [chatbot-production-a38f.up.railway.app/health](https://chatbot-production-a38f.up.railway.app/health) |
+| Dashboard de métricas ao vivo | [chatbot-production-a38f.up.railway.app/debug](https://chatbot-production-a38f.up.railway.app/debug) |
+| Snapshot JSON de métricas | [chatbot-production-a38f.up.railway.app/metrics](https://chatbot-production-a38f.up.railway.app/metrics) |
+
+Exemplos diretos via curl:
+```bash
+curl "https://chatbot-production-a38f.up.railway.app/weather?city=São Paulo"
+curl "https://chatbot-production-a38f.up.railway.app/forecast?city=Lisboa&days=5"
+```
+
+---
+
+## Stack
+
+| Camada | Tecnologia |
+|---|---|
+| Backend | Go + Gin |
+| Frontend / AI Agent | Next.js 16 + TypeScript |
+| Agent Framework | Vercel AI SDK |
+| LLM | Groq — llama-3.3-70b-versatile |
+| Dados meteorológicos | Open-Meteo API (gratuita, sem API key) |
+| Deploy frontend | Vercel |
+| Deploy backend | Railway |
 
 ---
 
@@ -46,38 +82,34 @@ Plataforma de previsão do tempo com **API Go** e **AI Agent em Next.js** que re
 └───────────────┼─────────────────────────────────────────────┘
                 │ HTTP
                 ▼
-┌─────────────────────────────┐
-│  Open-Meteo API (gratuita)  │  dados meteorológicos globais
-└─────────────────────────────┘
+┌─────────────────────────┐
+│  Open-Meteo API         │  dados meteorológicos globais
+└─────────────────────────┘
 ```
 
-### Fluxo de uma pergunta
+**Fluxo de uma pergunta:**
 
 1. Usuário digita *"Vai chover em Lisboa amanhã?"* no chat
-2. `useChat` envia a mensagem para `/api/chat` (Next.js)
-3. O agent normaliza as mensagens (UIMessage → ModelMessage) e chama o Groq
+2. `useChat` envia histórico completo para `/api/chat` (Next.js server-side)
+3. O agent normaliza as mensagens e chama o Groq LLM
 4. O LLM decide chamar a tool `getForecast` com `city="Lisboa"` e `days=1`
 5. O agent faz GET na API Go: `/forecast?city=Lisboa&days=1`
-6. A API consulta o cache; se miss, chama a Open-Meteo e armazena
-7. O LLM recebe os dados e gera a resposta em streaming para o usuário
+6. A API consulta o cache (TTL 5min); se miss, chama a Open-Meteo e armazena
+7. O LLM recebe os dados meteorológicos e gera a resposta em streaming
 
 ---
 
-## Endpoints da API
+## API Go — Referência
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/health` | Status do serviço com uptime |
+| GET | `/health` | Status e uptime do serviço |
 | GET | `/weather?city={city}` | Condições atuais |
 | GET | `/forecast?city={city}&days={n}` | Previsão de 1–7 dias |
-| GET | `/metrics` | Snapshot JSON de métricas ao vivo |
+| GET | `/metrics` | Snapshot JSON de métricas |
 | GET | `/debug` | Dashboard visual de métricas (auto-refresh 5s) |
 
-```bash
-curl "https://chatbot-production-a38f.up.railway.app/weather?city=São Paulo"
-curl "https://chatbot-production-a38f.up.railway.app/forecast?city=Lisboa&days=5"
-curl "https://chatbot-production-a38f.up.railway.app/metrics"
-```
+**Códigos de resposta:**
 
 | Código | Situação |
 |---|---|
@@ -90,7 +122,7 @@ curl "https://chatbot-production-a38f.up.railway.app/metrics"
 
 ## Observabilidade
 
-Dashboard embutido na API — sem Prometheus, sem Grafana, sem configuração extra.
+Dashboard embutido sem dependências externas — sem Prometheus, sem Grafana.
 
 **Acesse ao vivo:** [chatbot-production-a38f.up.railway.app/debug](https://chatbot-production-a38f.up.railway.app/debug)
 
@@ -111,63 +143,51 @@ Dashboard embutido na API — sem Prometheus, sem Grafana, sem configuração ex
 | `total_requests` | Total de requests desde o startup |
 | `total_errors` | Requests com status 4xx ou 5xx |
 | `error_rate_pct` | Taxa de erro em % |
-| `p95_latency_ms` | Latência no percentil 95 (histograma: <10ms / <50ms / <100ms / <500ms / ≥500ms) |
-| `cache_hits` | Lookups servidos do cache |
-| `cache_misses` | Lookups que foram à Open-Meteo |
+| `p95_latency_ms` | Latência no percentil 95 |
+| `cache_hits` / `cache_misses` | Eficiência do cache |
 | `cache_hit_rate_pct` | Taxa de cache hits em % |
+
+> **Nota:** `/metrics` e `/debug` estão intencionalmente públicos para facilitar esta avaliação. Em produção seriam protegidos por token Bearer via variável de ambiente.
 
 ---
 
 ## Decisões técnicas
 
-### Por que Vercel AI SDK?
+### Vercel AI SDK (vs LangChain.js)
+Integração nativa com Next.js, streaming sem boilerplate e tool calling com tipagem TypeScript completa. LangChain.js foi descartado por ser mais pesado e ter abstrações desnecessárias para um agent single-purpose.
 
-Integração nativa com Next.js, streaming de respostas sem boilerplate, e suporte a tool calling com tipagem TypeScript. Alternativas consideradas: LangChain.js (mais pesado, overkill para um agent single-purpose) e chamadas diretas à API Groq (sem streaming nem tool loop gerenciado).
+### Groq + llama-3.3-70b-versatile
+Velocidade de inferência ~10× maior que providers tradicionais e excelente desempenho em tool calling multilíngue. Tier gratuito generoso para desenvolvimento.
 
-### Por que Groq + llama-3.3-70b?
+### Open-Meteo
+Sem API key, gratuita, cobertura global e dados precisos. Elimina uma dependência de cadastro no setup.
 
-Velocidade de inferência ~10× maior que providers tradicionais, tier gratuito generoso para desenvolvimento, e o llama-3.3-70b tem excelente desempenho em tool calling e respostas multilíngues.
+### Cache in-memory com TTL de 5 minutos
+Dados meteorológicos mudam lentamente. TTL de 5min evita chamadas repetidas sem servir dados desatualizados. In-memory é suficiente para single-instance — Redis seria o próximo passo para múltiplas instâncias.
 
-### Por que Open-Meteo?
+### Gin (Go)
+Framework HTTP mais adotado no ecossistema Go, middleware ecosystem maduro e performance adequada para a carga esperada.
 
-Zero configuração — não exige API key, é gratuita, tem cobertura global e dados precisos. Elimina uma dependência de cadastro no setup do projeto.
+### `log/slog` com JSON
+Stdlib do Go 1.21+, zero dependências externas. Saída JSON ingestível por qualquer stack de observabilidade (Loki, Datadog, CloudWatch).
 
-### Por que cache in-memory com TTL de 5 minutos?
-
-Dados meteorológicos mudam lentamente. Um TTL de 5 minutos é suficiente para evitar chamadas repetidas à Open-Meteo sem servir dados desatualizados. Para deploy single-instance (caso de uso atual), in-memory é mais simples e performático que Redis.
-
-### Por que Gin (Go)?
-
-Framework HTTP mais adotado no ecossistema Go, middleware ecosystem maduro, performance adequada para uma API de previsão do tempo.
-
-### Por que `log/slog` com JSON?
-
-Stdlib do Go 1.21+, sem dependências externas. Saída em JSON é diretamente ingestível por qualquer stack de log aggregation (Loki, CloudWatch, Datadog).
-
-### Observabilidade embutida
-
-Em vez de adicionar Prometheus + Grafana ao `docker-compose.yml`, a API expõe `/metrics` (JSON) e `/debug` (dashboard HTML com `go:embed`). Zero dependências externas, zero configuração extra, demonstra o mesmo conceito de forma acessível.
-
-> **Nota sobre segurança:** os endpoints `/metrics` e `/debug` estão intencionalmente públicos neste projeto para facilitar a avaliação — qualquer pessoa com a URL pode inspecionar as métricas ao vivo. Em um ambiente profissional, esses endpoints seriam protegidos por autenticação (ex: token Bearer via variável de ambiente), pois expõem informações operacionais internas como taxa de erros, latência e uptime do serviço.
-
-### Por que Vercel + Railway?
-
-O frontend (Vercel) chama a API (Railway) server-side — `GROQ_API_KEY` e `API_URL` nunca chegam ao browser. Vercel tem integração nativa com Next.js e CI/CD automático via GitHub. Railway faz deploy direto a partir do `Dockerfile` existente, injeta `PORT` automaticamente e expõe HTTPS sem configuração de servidor.
+### Vercel + Railway
+Frontend (Vercel) chama a API (Railway) server-side — `GROQ_API_KEY` e `API_URL` nunca chegam ao browser. CI/CD automático via GitHub em ambos.
 
 ---
 
-## Rodando localmente
+## Setup local
 
 **Pré-requisitos:** Docker Desktop + chave gratuita do [Groq](https://console.groq.com)
 
 ```bash
-git clone https://github.com/Iv4nLanna/medereologico-ChatBotAI.git
-cd medereologico-ChatBotAI
-cp .env.example .env          # edite .env e insira sua GROQ_API_KEY
+git clone https://github.com/Iv4nLanna/metereologico-ChatBotAI.git
+cd metereologico-ChatBotAI
+cp .env.example .env          # insira sua GROQ_API_KEY no .env
 docker compose up --build
 ```
 
-| Serviço | URL |
+| Serviço | URL local |
 |---|---|
 | Chat | http://localhost:3000 |
 | API Go | http://localhost:8080 |
@@ -181,7 +201,7 @@ docker compose up --build
 # Unitários (Go)
 cd api && go test ./...
 
-# Integração (requer a API rodando)
+# Integração — requer a API rodando
 cd api && go test -tags=integration ./...
 
 # Frontend (TypeScript)
@@ -190,12 +210,13 @@ cd web && node --test lib/chat-messages.test.mts
 
 ---
 
-## Considerações para evolução
+## Considerações para produção
 
 | Área | Recomendação |
 |---|---|
 | Cache | Substituir in-memory por **Redis** para suportar múltiplas instâncias |
-| Secrets | Usar secrets manager (AWS Secrets Manager, HashiCorp Vault) para `GROQ_API_KEY` |
-| Rate limiting | Middleware de rate limit por IP na API Go |
+| Autenticação | Token Bearer para `/metrics` e `/debug`; auth na `/api/chat` para controle de uso |
+| Rate limiting | Middleware por IP na API Go para proteger a cota da Open-Meteo |
 | Resiliência | Retry com exponential backoff nas chamadas à Open-Meteo |
 | Observabilidade | Exportar métricas para Prometheus + Grafana; traces com OpenTelemetry |
+| Secrets | AWS Secrets Manager ou HashiCorp Vault para `GROQ_API_KEY` |
